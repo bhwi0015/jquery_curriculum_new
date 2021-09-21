@@ -30,37 +30,35 @@
       <script>
 
       $(function() {
-        // 検索ワード
+        // 検索
         var keyword = "";
-        var page__num= 1;
+        var pageNum = 1;
         //ページ切り替え
-        $(document).on("click",'[data-js="search-btn"], [data-js="page-prev"], [data-js="page-next"]', function(e) {
-          e.preventDefault();
 
-          if($(this).hasClass("disabled"))　  {
-            return false;
-          } 
-          $('[data-js="pager"]').remove();
-          $('[data-js="book-lists"]').empty();
-          $('[data-js="error-message"]').empty();
-          
-          switch($(this).data("js")) {
-            case "search-btn":
-              keyword = $('[data-js="search-word"]').val();
-              page__num = 1;
-              break;
-            case "page-prev":
-              page__num--;
-              break;
-            case "page-next":
-              page__num++;
-              break;
-          }
-          api__ajax();
+
+        $('[data-js="search-btn"]').on('click', function() {
+          pageNum = 1;
+          keyword = $('[data-js="search-word"]').val();
+          removePageContents();
+          apiAjax();
         });
 
-        // 楽天API検索機能
-        function api__ajax() {
+        $(document).on('click', '[data-js="page-next"], [data-js="page-prev"]', function(e) {
+          e.preventDefault();
+          if ($(this).hasClass('disabled')) {
+            return;
+          }
+          if ($(this).data("js") === "page-prev") {
+            pageNum--;
+          } else if ($(this).data("js") === "page-next") {
+            pageNum++;
+          }
+          removePageContents();
+          apiAjax();
+        });
+
+        // 楽天API検索
+        function apiAjax() {
           // 区分:サービス固有パラメーター
           $.ajax({
             url: 'https://app.rakuten.co.jp/services/api/BooksTotal/Search/20130522',
@@ -71,30 +69,30 @@
               booksGenreId: '001',
               keyword: keyword,
               hits: 20,
-              page: page__num,
+              page: pageNum,
             }
             // 正常時
           }).done(function(data) {
             // エラーメッセージ
-            if(data.count === 0) {
-              $('[data-js="error-message"]').html("<p>検索結果がありませんでした。<br>別のキーワードで検索してください</p>");
-              return false;
+            if (data.count === 0) {
+              $('[data-js="error-message"]').html('<p>検索結果がありませんでした。<br>別のキーワードで検索してください</p>');
+              return;
             }
             // items表示
-            view__items(data);
+            viewItems(data);
             // ページャー表示
-            view__pager(data);
+            viewPager(data);
             // ページャー機能
-            disabled__pager(data.pageCount);
+            disabledPager(data.pageCount);
             // 異常時
-          }).fail(function(jqXHR){
+          }).fail(function(jqXHR) {
             // エラーメッセージ
-            view__error(jqXHR);
+            viewError(jqXHR);
           });
         };
 
         // エラーメッセージ
-        function errors(jqXHR) {
+        function viewError(jqXHR) {
           switch(jqXHR.status) {
             case 400:
                 $('[data-js="error-message"]').html("<p>検索文字が入力されていません。</p>");
@@ -111,46 +109,53 @@
           }
         };
 
-          // item表示
-          function view__items(data) {
-            var template__item = '';
-          $.each(data.Items, function(index, book){
-              template__item += '<li class="lists__item">' +
-                '<div class="lists__item__inner">' +
-                '<a href="' + book.Item.itemUrl +  '" class="lists__item__link" target="_blank">' +
-                '<img src="' + book.Item.largeImageUrl + '" class="lists__item__img" alt="">' +
-                '<p class="lists__item__detail">作品名：' + book.Item.title + '</p>' +
-                '<p class="lists__item__detail">作者　：' + book.Item.author + '</p>' +
-                '<p class="lists__item__detail">出版社：' + book.Item.publisherName + '</p>' +
-                '</a>' + 
-                '</div>' + 
-                '</li>'
+        // item表示
+        function viewItems(data) {
+          var template__item = "";
+          $.each(data.Items, function(index, book) {
+            template__item +=
+              '<li class="lists__item">' +
+              '<div class="lists__item__inner">' +
+              '<a href="' + book.Item.itemUrl +  '" class="lists__item__link" target="_blank">' +
+              '<img src="' + book.Item.largeImageUrl + '" class="lists__item__img" alt="">' +
+              '<p class="lists__item__detail">作品名：' + book.Item.title + '</p>' +
+              '<p class="lists__item__detail">作者　：' + book.Item.author + '</p>' +
+              '<p class="lists__item__detail">出版社：' + book.Item.publisherName + '</p>' +
+              '</a>' +
+              '</div>' +
+              '</li>';
           });
-          $('[data-js="book-lists"]').append(template__item);
+          $('[data-js="book-lists"]').html(template__item);
         }
 
         // ページャー表示
-        function view__pager(data) {
+        function viewPager(data) {
           var pager = 
             '<div class="pager" data-js="pager">' +
             '<div class="counter">' +
             '<span class="counter-current">' + data.page +
-            '</span>' + '/' + '<span class="counter-all">' + data.pageCount+ '</span>' +
+            '</span>/<span class="counter-all">' + data.pageCount + '</span>' +
             '</div>' + '<div class="btn-wrapper">' +
-            '<a class="btn-item" data-js="page-prev" href="">' +
-            '前へ' + '</a>' +
-            '<a class="btn-item" data-js="page-next" href="">' +
-            '次へ' + '</a>' + 
-            '</div>' + 
-            '</div>'
+            '<a class="btn-item" data-js="page-prev" href="#">前へ</a>' +
+            '<a class="btn-item" data-js="page-next" href="#">次へ</a>' + 
+            '</div>' +
+            '</div>';
             $('[data-js="book-lists"]').after(pager);
         };
         
+
+        function removePageContents() {
+          $('[data-js="pager"]').remove();
+          $('[data-js="book-lists"]').empty();
+          $('[data-js="error-message"]').empty();
+        }
+
         // ページャー機能
-        function disabled__pager(page__count) {
-          if(page__num === 1) {
+        function disabledPager(page__count) {
+          if(pageNum === 1) {
             $('[data-js="page-prev"]').addClass("disabled");
-          }  else if (page__num === page__count) {
+          }
+          if (pageNum === page__count) {
             $('[data-js="page-next"]').addClass("disabled");
           }
         };
